@@ -12,20 +12,21 @@ Click the badge below to visit the GitHub page:
 
 ---
 
-## ✅ Project Status
+## ✅ Tech Stack
 
 <picture><img src="https://img.shields.io/github/actions/workflow/status/Druaka/devjourney/deploy-frontend.yml?branch=main&label=Build%20Status" alt="Build Status"></picture>
 <picture><img src="https://img.shields.io/github/last-commit/Druaka/devjourney?label=Last%20Commit" alt="Last Commit"></picture>
 
 This is an actively developing monorepo project with a live frontend, connected backend and clean CI/CD.
 
-### What’s been accomplished so far:
-
-- ✅ Clean monorepo structure with shared scripts and npm orchestration
-- ✅ Node.js + Express backend deployed to Render with auto-deploys on Git push to `devjourney/backend`
-- ✅ MongoDB hosted via OVH Discovery
-- ✅ Angular frontend hosted on GitHub Pages with GitHub Actions deploy workflow
-- ✅ Essential web analytics via Cloudflare
+| Layer | Technology |
+|---|---|
+| Frontend | [Angular](https://angular.dev/) · [PrimeNG](https://primeng.org/) |
+| Backend | [Node.js](https://nodejs.org/) · [Express](https://expressjs.com/) |
+| Database | [MongoDB](https://www.mongodb.com/) · [Mongoose](https://mongoosejs.com/) |
+| Data Source | [TCGdex](https://tcgdex.dev/) · [API Docs](https://api.tcgdex.net/v2/openapi/) — Pokémon TCG card and set data |
+| Hosting | [GitHub Pages](https://pages.github.com/) (frontend) · [Render](https://render.com/) (backend) |
+| DevOps | Docker Compose · GitHub Actions |
 
 ---
 
