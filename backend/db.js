@@ -1,4 +1,4 @@
-require('dotenv').config({path: '.env.prod'});
+require('dotenv').config();
 
 const mongoose = require('mongoose');
 const TCGdex = require('@tcgdex/sdk').default;
