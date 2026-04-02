@@ -4,6 +4,7 @@
 # Compiled output
 dist/
 docs/
+logs/
 tmp/
 out-tsc/
 bazel-out/
