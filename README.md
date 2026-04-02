@@ -33,32 +33,38 @@ This is an actively developing monorepo project with a live frontend, connected 
 
 ```
 devjourney/
-├── .github/        # GitHub Actions (Pages deployment)
-├── frontend/       # Angular app
-├── backend/        # Node.js + Express API
-├── package.json    # Root scripts to manage both apps
+├── .github/            # GitHub Actions (Pages deployment)
+├── frontend/           # Angular app
+├── backend/            # Node.js + Express API
+├── docker-compose.yml  # Local dev environment (Mongo + Backend + Frontend)
+├── package.json        # Root scripts to manage both apps
 ```
 
 ---
 
 ## 🔧 How to Run Locally
 
-From the project root:
-
-1. Install dependencies for both frontend and backend:
+Start everything with Docker Compose (includes MongoDB, backend and frontend):
 
 ```bash
-npm run install:all
+docker compose up --build
 ```
 
-2. Start both apps concurrently:
-
-```bash
-npm start
-```
-
-Frontend runs on http://localhost:4200  
+Frontend runs on http://localhost:4200/devjourney  
 Backend runs on http://localhost:8080
+
+The backend reads `MONGODB_URI` and `PORT` from environment variables set in `docker-compose.yml`.
+
+### 🌍 Environment Switching
+
+The frontend uses Angular's `fileReplacements` to swap environment files at build time:
+
+| Command | Config | Environment file | API URL |
+|---|---|---|---|
+| `ng serve` | development | `environment.local.ts` | `http://localhost:8080/api` |
+| `ng build` | production (default) | `environment.prod.ts` | `https://devjourney-backend.onrender.com/api` |
+
+`ng build` uses the `production` configuration by default, which replaces `environment.local.ts` with `environment.prod.ts`. This means `npm run build:frontend` produces a production build targeting the hosted backend on Render.
 
 ---
 

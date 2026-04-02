@@ -1,6 +1,5 @@
 # Environment variables
-.env.local
-.env.prod
+**/.env
 
 # Compiled output
 dist/
