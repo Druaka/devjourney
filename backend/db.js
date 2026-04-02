@@ -15,8 +15,15 @@ const throttle = throttledQueue(500, 10);
 const cache = require('./cache');
 
 async function connectAndSeedDB() {
+    if (!uri) {
+        throw new Error('MONGODB_URI is not set. Check your .env file or environment variables.');
+    }
+
     try {
-        await mongoose.connect(uri, {});
+        await mongoose.connect(uri, {
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000,
+        });
         console.log('Connected to MongoDB');
 
         await mongoose.connection.db.dropDatabase();
@@ -33,7 +40,13 @@ async function connectAndSeedDB() {
 
         console.log('Database seeding complete');
     } catch (err) {
-        console.error('Error during DB setup:', err);
+        if (err.name === 'MongoServerSelectionError') {
+            console.error('Failed to connect to MongoDB. Possible causes:');
+            console.error('  - Your IP address is not whitelisted in the database network settings');
+            console.error('  - The database host is unreachable or the URI is incorrect');
+            console.error('  - The database server is down');
+        }
+        console.error('Error during DB setup:', err.message);
         throw err;
     }
 }

@@ -10,9 +10,21 @@ const port = process.env.PORT || 8080;
 app.use(cors());
 app.use(express.json());
 
+// Log the server's public IP on startup (useful for DB IP whitelisting)
+async function logPublicIp() {
+    try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        console.log(`Server public IP: ${data.ip} (whitelist this in your database network settings)`);
+    } catch {
+        console.log('Could not determine public IP');
+    }
+}
+
 // Main function to setup DB then start server
 async function startServer() {
     try {
+        await logPublicIp();
         await require('./db.js')();
 
         // Use the routes
