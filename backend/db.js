@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: '/etc/secrets/.env' });
 
 const mongoose = require('mongoose');
 const TCGdex = require('@tcgdex/sdk').default;
