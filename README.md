@@ -17,16 +17,28 @@ Click the badge below to visit the GitHub page:
 <picture><img src="https://img.shields.io/github/actions/workflow/status/Druaka/devjourney/deploy-frontend.yml?branch=main&label=Build%20Status" alt="Build Status"></picture>
 <picture><img src="https://img.shields.io/github/last-commit/Druaka/devjourney?label=Last%20Commit" alt="Last Commit"></picture>
 
-This is an actively developing monorepo project with a live frontend, connected backend and clean CI/CD.
+This monorepo contains a live Angular frontend, a Node/Express backend, and a MongoDB database. Below is a concise summary of the core technologies, hosting, and operational notes.
 
 | Layer | Technology |
 |---|---|
-| Frontend | [Angular](https://angular.dev/) · [PrimeNG](https://primeng.org/) |
-| Backend | [Node.js](https://nodejs.org/) · [Express](https://expressjs.com/) |
-| Database | [MongoDB](https://www.mongodb.com/) · [Mongoose](https://mongoosejs.com/) |
-| Data Source | [TCGdex](https://tcgdex.dev/) · [API Docs](https://api.tcgdex.net/v2/openapi/) — Pokémon TCG card and set data |
-| Hosting | [GitHub Pages](https://pages.github.com/) (frontend) · [Render](https://render.com/) (backend) |
-| DevOps | Docker Compose · GitHub Actions |
+| Frontend | [Angular](https://angular.dev/) · [PrimeNG](https://primeng.org/) — SPA built with Angular CLI; deployed to GitHub Pages |
+| Backend | [Node.js](https://nodejs.org/) · [Express](https://expressjs.com/) — REST API that fetches and sanitizes data from TCGdex; auto-deploys on Render |
+| Database | [MongoDB](https://www.mongodb.com/) (OVHcloud MongoDB Discovery) · [Mongoose](https://mongoosejs.com/) — managed cluster; connection via `MONGODB_URI` |
+| Data source | [TCGdex](https://tcgdex.dev/) — official Pokémon TCG API used to fetch sets and card metadata |
+| Hosting & infra | Frontend: [GitHub Pages](https://pages.github.com/) · Backend: [Render](https://render.com/) (free-tier) · DB: [OVHcloud MongoDB Discovery](https://www.ovhcloud.com/) · Local dev: [Docker Compose](https://docs.docker.com/compose/) |
+| DevOps | [Docker Compose](https://docs.docker.com/compose/) (local) · [GitHub Actions](https://docs.github.com/actions) (CI/CD) · [angular-cli-ghpages](https://github.com/angular-schule/angular-cli-ghpages) for frontend deploys |
+
+**Notes**
+- **Backend lifecycle:** on startup the server connects to MongoDB, fetches and sanitizes the latest TCG sets via the TCGdex SDK, stores them in MongoDB and caches the results in memory for fast reads.
+- **Render free-tier:** the backend may spin down after ~15 minutes of inactivity; the first request after spin-down triggers a cold start which can take up to ~1 minute.
+- **Database:** production and staging data are hosted on OVHcloud's MongoDB Discovery offering. Connection details are supplied via `MONGODB_URI`.
+- **Local development:** run `docker compose up --build` to bring up MongoDB, backend and frontend. Frontend: `http://localhost:4200/devjourney`. Backend: `http://localhost:8080`.
+- **Environment:** the backend reads `MONGODB_URI` and `PORT` from environment variables (see `docker-compose.yml`).
+
+**Recommended runtimes (tested)**
+- Node.js 18+ (LTS)
+- Angular CLI (project configured via `angular.json`)
+- MongoDB 4.4+ (managed by OVH)
 
 ---
 
