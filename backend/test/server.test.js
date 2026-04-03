@@ -11,8 +11,8 @@ describe('Server module', () => {
 
     it('GET /api/ping responds with Pong (routes mounted without starting server)', async () => {
         // Ensure DB is not called when importing server
-        jest.doMock('../db', () => jest.fn().mockResolvedValue());
-        const { app } = require('../server');
+        jest.doMock('../src/services/db', () => jest.fn().mockResolvedValue());
+        const { app } = require('../src/server');
 
         const res = await request(app).get('/api/ping/');
         expect(res.status).toBe(200);
@@ -21,11 +21,11 @@ describe('Server module', () => {
 
     it('startServer starts server when DB connects and fetch succeeds', async () => {
         jest.resetModules();
-        jest.doMock('../db', () => jest.fn().mockResolvedValue());
+        jest.doMock('../src/services/db', () => jest.fn().mockResolvedValue());
 
         global.fetch = jest.fn().mockResolvedValue({ json: jest.fn().mockResolvedValue({ ip: '1.2.3.4' }) });
 
-        const { startServer, app } = require('../server');
+        const { startServer, app } = require('../src/server');
         app.listen = jest.fn();
 
         await expect(startServer()).resolves.toBeUndefined();
@@ -36,15 +36,15 @@ describe('Server module', () => {
 
     it('startServer logs error and exits when DB fails', async () => {
         jest.resetModules();
-        jest.doMock('../db', () => jest.fn().mockRejectedValue(new Error('db fail')));
+        jest.doMock('../src/services/db', () => jest.fn().mockRejectedValue(new Error('db fail')));
 
         global.fetch = jest.fn().mockResolvedValue({ json: jest.fn().mockResolvedValue({ ip: '1.2.3.4' }) });
 
         const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
-        const logger = require('../logger');
+        const logger = require('../src/lib/logger');
         const loggerErrorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
 
-        const { startServer, app } = require('../server');
+        const { startServer, app } = require('../src/server');
         app.listen = jest.fn();
 
         await startServer();
@@ -59,12 +59,12 @@ describe('Server module', () => {
     it('logs public IP and starts listening (mocked fetch and db)', async () => {
         jest.resetModules();
         const mockLogger = { log: jest.fn(), error: jest.fn() };
-        jest.doMock('../logger', () => mockLogger);
+        jest.doMock('../src/lib/logger', () => mockLogger);
 
         global.fetch = jest.fn().mockResolvedValue({ json: async () => ({ ip: '1.2.3.4' }) });
-        jest.doMock('../db', () => jest.fn().mockResolvedValue());
+        jest.doMock('../src/services/db', () => jest.fn().mockResolvedValue());
 
-        const server = require('../server');
+        const server = require('../src/server');
         // prevent real listen
         server.app.listen = jest.fn((port, cb) => cb && cb());
 
@@ -76,14 +76,14 @@ describe('Server module', () => {
     it('handles fetch failure and logs inability to determine IP', async () => {
         jest.resetModules();
         const mockLogger = { log: jest.fn(), error: jest.fn() };
-        jest.doMock('../logger', () => mockLogger);
+        jest.doMock('../src/lib/logger', () => mockLogger);
 
         // Make fetch throw
         global.fetch = jest.fn().mockRejectedValue(new Error('net fail'));
 
-        jest.doMock('../db', () => jest.fn().mockResolvedValue());
+        jest.doMock('../src/services/db', () => jest.fn().mockResolvedValue());
 
-        const server = require('../server');
+        const server = require('../src/server');
         server.app.listen = jest.fn((port, cb) => cb && cb());
 
         await expect(server.startServer()).resolves.toBeUndefined();
@@ -96,21 +96,20 @@ describe('Server module', () => {
         process.env.FORCE_START = '1';
 
         const mockLogger = { log: jest.fn(), error: jest.fn() };
-        jest.doMock('../logger', () => mockLogger);
+        jest.doMock('../src/lib/logger', () => mockLogger);
 
         global.fetch = jest.fn().mockResolvedValue({ json: async () => ({ ip: '1.2.3.4' }) });
 
         // Mock db module to avoid real DB calls
-        jest.doMock('../db', () => jest.fn().mockResolvedValue());
+        jest.doMock('../src/services/db', () => jest.fn().mockResolvedValue());
 
-        // Require server; with FORCE_START set, it should call startServer()
-        const server = require('../server');
+        // Require server and call startServer explicitly
+        const server = require('../src/server');
 
         // app.listen was replaced by our test in earlier suites; ensure it's safe here
         server.app.listen = jest.fn((port, cb) => cb && cb());
 
-        // allow some ticks for startServer to run
-        await new Promise(resolve => setImmediate(resolve));
+        await server.startServer();
 
         expect(mockLogger.log).toHaveBeenCalled();
         expect(server.app.listen).toHaveBeenCalled();

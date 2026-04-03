@@ -2,8 +2,8 @@ require('dotenv').config({ path: '/etc/secrets/.env' });
 
 const mongoose = require('mongoose');
 const throttledQueue = require('throttled-queue');
-const {TcgpSetModel, PtcgSetModel} = require('./schemas');
-const cache = require('./cache');
+const {TcgpSetModel, PtcgSetModel} = require('../models/schemas');
+const cache = require('../lib/cache');
 
 const throttle = throttledQueue(500, 10);
 
@@ -40,7 +40,7 @@ async function connectAndSeedDB({ tcgdex, Query, logger } = {}) {
     }
 
     if (!logger) {
-        logger = require('./logger');
+        logger = require('../lib/logger');
     }
 
     try {

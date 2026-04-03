@@ -1,4 +1,4 @@
-const { PtcgSetModel, TcgpSetModel } = require('../schemas');
+const { PtcgSetModel, TcgpSetModel } = require('../src/models/schemas');
 
 describe('schemas model exports', () => {
   it('exports PtcgSetModel and TcgpSetModel with correct modelName', () => {

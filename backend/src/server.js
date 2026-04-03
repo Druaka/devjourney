@@ -9,7 +9,7 @@ const port = process.env.PORT || 8080;
 
 app.use(cors());
 app.use(express.json());
-const logger = require('./logger');
+const logger = require('./lib/logger');
 
 // Log the server's public IP on startup (useful for DB IP whitelisting)
 async function logPublicIp() {
@@ -31,7 +31,7 @@ app.use('/api/tcgdex/tcgp-sets', setsTcgpRoutes);
 async function startServer() {
     try {
         await logPublicIp();
-        await require('./db.js')();
+        await require('./services/db')();
 
         app.listen(port, () => {
             logger.log(`Backend listening at http://localhost:${port}`);
@@ -44,7 +44,7 @@ async function startServer() {
 
 module.exports = { app, startServer };
 
-// Allow forcing the server to start (useful for tests).
+// Preserve previous behavior when running the file directly
 if (require.main === module || process.env.FORCE_START === '1') {
     startServer();
 }

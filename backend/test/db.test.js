@@ -5,7 +5,7 @@ jest.mock('mongoose', () => ({
     connection: { db: { dropDatabase: jest.fn().mockResolvedValue() } },
 }));
 
-jest.mock('../schemas', () => {
+jest.mock('../src/models/schemas', () => {
     const insertManyP = jest.fn().mockResolvedValue();
     const insertManyT = jest.fn().mockResolvedValue();
     return {
@@ -38,9 +38,9 @@ describe('db targeted coverage', () => {
             connection: { db: { dropDatabase: jest.fn().mockResolvedValue() } },
         }));
 
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() }, TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() }, TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() } }));
 
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
         await expect(connectAndSeedDB()).resolves.toBeUndefined();
 
         const sdk = require('@tcgdex/sdk');
@@ -64,10 +64,10 @@ describe('db targeted coverage', () => {
 
         const insertP = jest.fn().mockResolvedValue();
         const insertT = jest.fn().mockResolvedValue();
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: insertP }, TcgpSetModel: { insertMany: insertT } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: insertP }, TcgpSetModel: { insertMany: insertT } }));
 
         const mockLogger = { log: jest.fn(), error: jest.fn() };
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
 
         await expect(connectAndSeedDB({ logger: mockLogger })).resolves.toBeUndefined();
 
@@ -77,8 +77,8 @@ describe('db targeted coverage', () => {
 
     it('applySetsToCache normalizes documents and plain objects into cache (covers lines 22-23)', () => {
         jest.resetModules();
-        const db = require('../db');
-        const cache = require('../cache');
+        const db = require('../src/services/db');
+        const cache = require('../src/lib/cache');
 
         // prepare inputs: one doc-like with toObject, one plain object
         const docLike = { toObject: () => ({ id: 'd1', name: 'Doc' }) };
@@ -104,10 +104,10 @@ describe('db targeted coverage', () => {
             connection: { db: { dropDatabase: jest.fn().mockResolvedValue() } },
         }));
 
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() }, TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() }, TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() } }));
 
         const mockLogger = { log: jest.fn(), error: jest.fn() };
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
 
         await expect(connectAndSeedDB({ logger: mockLogger })).rejects.toBeDefined();
 
@@ -117,8 +117,8 @@ describe('db targeted coverage', () => {
 
     it('applySetsToCache handles toObject on both ptcg and tcgp arrays (additional branch)', () => {
         jest.resetModules();
-        const db = require('../db');
-        const cache = require('../cache');
+        const db = require('../src/services/db');
+        const cache = require('../src/lib/cache');
 
         const docA = { toObject: () => ({ id: 'a', name: 'A' }) };
         const docB = { toObject: () => ({ id: 'b', name: 'B' }) };
@@ -141,10 +141,10 @@ describe('db targeted coverage', () => {
             connection: { db: { dropDatabase: jest.fn().mockResolvedValue() } },
         }));
 
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() }, TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() }, TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() } }));
 
         const mockLogger = { log: jest.fn(), error: jest.fn() };
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
 
         await expect(connectAndSeedDB({ logger: mockLogger })).rejects.toBeDefined();
 
@@ -167,10 +167,10 @@ describe('db targeted coverage', () => {
             return { default: TCGdexMock, Query };
         });
 
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() }, TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() }, TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() } }));
 
         const mockLogger = { log: jest.fn(), error: jest.fn() };
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
 
         await expect(connectAndSeedDB({ logger: mockLogger })).rejects.toBeDefined();
 
@@ -180,7 +180,7 @@ describe('db targeted coverage', () => {
 
     it('handleDbSetupError helper calls logMongoSelectionHelp for MongoServerSelectionError (covers conditional line)', () => {
         jest.resetModules();
-        const db = require('../db');
+        const db = require('../src/services/db');
         const mockLogger = { error: jest.fn() };
 
         const err = Object.assign(new Error('selection'), { name: 'MongoServerSelectionError' });
@@ -193,7 +193,7 @@ describe('db targeted coverage', () => {
 
     it('logMongoSelectionHelp directly logs the help message', () => {
         jest.resetModules();
-        const db = require('../db');
+        const db = require('../src/services/db');
         const mockLogger = { error: jest.fn() };
 
         db.logMongoSelectionHelp(mockLogger);
@@ -204,7 +204,7 @@ describe('db targeted coverage', () => {
     });
 
     it('invoke handleDbSetupError without resetting modules to ensure call-site is executed', () => {
-        const db = require('../db');
+        const db = require('../src/services/db');
         const mockLogger = { error: jest.fn() };
 
         db.handleDbSetupError(Object.assign(new Error('e'), { name: 'MongoServerSelectionError' }), mockLogger);
@@ -217,7 +217,7 @@ describe('db targeted coverage', () => {
 process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/devjourney_test';
 
 const mongoose = require('mongoose');
-const connectAndSeedDB = require('../db');
+const connectAndSeedDB = require('../src/services/db');
 
 describe('db.connectAndSeedDB', () => {
     beforeAll(() => {
@@ -259,7 +259,7 @@ describe('db.connectAndSeedDB', () => {
             connect: jest.fn().mockResolvedValue(),
             connection: { db: { dropDatabase: jest.fn().mockResolvedValue() } },
         }));
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
 
         const mockTcgdex = {
             set: {
@@ -285,11 +285,11 @@ describe('db.connectAndSeedDB', () => {
 
         const mockLogger = { log: jest.fn(), error: jest.fn() };
 
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
         await expect(connectAndSeedDB({ tcgdex: mockTcgdex, Query: mockQuery, logger: mockLogger })).resolves.toBeUndefined();
 
         // retrieve the mocked schema functions to assert they were called
-        const schemas = require('../schemas');
+        const schemas = require('../src/models/schemas');
         expect(schemas.PtcgSetModel.insertMany).toHaveBeenCalled();
         expect(schemas.TcgpSetModel.insertMany).toHaveBeenCalled();
         expect(mockLogger.error).not.toHaveBeenCalled();
@@ -313,12 +313,12 @@ describe('db extra error handling (consolidated)', () => {
         }));
 
         // Provide simple schemas mock
-        jest.doMock('../schemas', () => ({
+        jest.doMock('../src/models/schemas', () => ({
             PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() },
             TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() },
         }));
 
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
 
         await expect(connectAndSeedDB({ tcgdex: { set: { list: jest.fn() } }, Query: { create: () => ({}) }, logger: { log: jest.fn(), error: jest.fn() } })).rejects.toThrow('MONGODB_URI is not set');
     });
@@ -330,13 +330,13 @@ describe('db extra error handling (consolidated)', () => {
             connection: { db: { dropDatabase: jest.fn().mockResolvedValue() } },
         }));
 
-        jest.doMock('../schemas', () => ({
+        jest.doMock('../src/models/schemas', () => ({
             PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() },
             TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() },
         }));
 
         const mockLogger = { log: jest.fn(), error: jest.fn() };
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
 
         await expect(connectAndSeedDB({ tcgdex: { set: { list: jest.fn().mockResolvedValue([]), get: jest.fn() } }, Query: { create: () => ({}) }, logger: mockLogger })).rejects.toBeDefined();
 
@@ -354,7 +354,7 @@ describe('db extra error handling (consolidated)', () => {
 
         const insertManyP = jest.fn().mockResolvedValue();
         const insertManyT = jest.fn().mockResolvedValue();
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
 
         const mockTcgdex = {
             set: {
@@ -366,7 +366,7 @@ describe('db extra error handling (consolidated)', () => {
         const mockQuery = { create: () => ({ sort: () => ({ not: { equal: () => ({}) }, equal: () => ({}) }) }) };
         const mockLogger = { log: jest.fn(), error: jest.fn() };
 
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
 
         await expect(connectAndSeedDB({ tcgdex: mockTcgdex, Query: mockQuery, logger: mockLogger })).resolves.toBeUndefined();
         expect(mockLogger.error).toHaveBeenCalled();
@@ -383,7 +383,7 @@ describe('db extra error handling (consolidated)', () => {
         // Make insertMany reject to hit the catch branch
         const insertManyP = jest.fn().mockRejectedValue(new Error('insert fail'));
         const insertManyT = jest.fn().mockResolvedValue();
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
 
         const mockTcgdex = {
             set: {
@@ -395,7 +395,7 @@ describe('db extra error handling (consolidated)', () => {
         const mockQuery = { create: () => ({ sort: () => ({ not: { equal: () => ({}) }, equal: () => ({}) }) }) };
         const mockLogger = { log: jest.fn(), error: jest.fn() };
 
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
 
         await expect(connectAndSeedDB({ tcgdex: mockTcgdex, Query: mockQuery, logger: mockLogger })).resolves.toBeUndefined();
         expect(mockLogger.error).toHaveBeenCalled();
@@ -409,7 +409,7 @@ describe('db extra error handling (consolidated)', () => {
             connection: { db: { dropDatabase: jest.fn().mockResolvedValue() } },
         }));
 
-        jest.doMock('../schemas', () => ({
+        jest.doMock('../src/models/schemas', () => ({
             PtcgSetModel: { insertMany: jest.fn().mockResolvedValue() },
             TcgpSetModel: { insertMany: jest.fn().mockResolvedValue() },
         }));
@@ -419,7 +419,7 @@ describe('db extra error handling (consolidated)', () => {
 
         const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
         await expect(connectAndSeedDB({ tcgdex: mockTcgdex, Query: mockQuery })).resolves.toBeUndefined();
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
@@ -434,7 +434,7 @@ describe('db extra error handling (consolidated)', () => {
 
         const insertManyP = jest.fn().mockResolvedValue();
         const insertManyT = jest.fn().mockResolvedValue();
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
 
         const mockTcgdex = {
             set: {
@@ -449,10 +449,10 @@ describe('db extra error handling (consolidated)', () => {
         const mockQuery = { create: () => ({ sort: () => ({ not: { equal: () => ({}) }, equal: () => ({}) }) }) };
         const mockLogger = { log: jest.fn(), error: jest.fn() };
 
-        const cache = require('../cache');
+        const cache = require('../src/lib/cache');
         cache.ptcgSets = [];
 
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
         await expect(connectAndSeedDB({ tcgdex: mockTcgdex, Query: mockQuery, logger: mockLogger })).resolves.toBeUndefined();
 
         expect(cache.ptcgSets[0].cards[0].localId).toBe('L1');
@@ -467,7 +467,7 @@ describe('db extra error handling (consolidated)', () => {
 
         const insertManyP = jest.fn().mockResolvedValue();
         const insertManyT = jest.fn().mockRejectedValue(new Error('tcgp insert fail'));
-        jest.doMock('../schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
+        jest.doMock('../src/models/schemas', () => ({ PtcgSetModel: { insertMany: insertManyP }, TcgpSetModel: { insertMany: insertManyT } }));
 
         const mockTcgdex = {
             set: {
@@ -479,7 +479,7 @@ describe('db extra error handling (consolidated)', () => {
         const mockQuery = { create: () => ({ sort: () => ({ not: { equal: () => ({}) }, equal: () => ({}) }) }) };
         const mockLogger = { log: jest.fn(), error: jest.fn() };
 
-        const connectAndSeedDB = require('../db');
+        const connectAndSeedDB = require('../src/services/db');
         await expect(connectAndSeedDB({ tcgdex: mockTcgdex, Query: mockQuery, logger: mockLogger })).resolves.toBeUndefined();
         expect(mockLogger.error).toHaveBeenCalled();
         expect(mockLogger.error.mock.calls.flat().join('')).toMatch(/Error storing TcgpSets in MongoDB/);
