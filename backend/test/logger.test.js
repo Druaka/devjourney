@@ -4,7 +4,7 @@ describe('logger module', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.restoreAllMocks();
-    logger = require('../logger');
+    logger = require('../src/lib/logger');
   });
 
   it('calls console.log with prefixed args', () => {

@@ -1,6 +1,6 @@
 const request = require('supertest');
 const express = require('express');
-const pingRoutes = require('../routes/ping');
+const pingRoutes = require('../src/routes/ping');
 
 describe('GET /api/ping', () => {
     let app;

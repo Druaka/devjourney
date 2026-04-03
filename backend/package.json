@@ -1,9 +1,9 @@
 {
   "name": "devjourney-backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node src/server.js",
     "test": "jest --runInBand",
     "coverage": "jest --coverage"
   },
@@ -28,6 +28,7 @@
     "setupFiles": ["<rootDir>/test/utils/setupTests.js"],
     "collectCoverage": true,
     "collectCoverageFrom": [
+      "src/**/*.js",
       "routes/**/*.js",
       "*.js"
     ],

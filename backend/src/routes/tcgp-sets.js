@@ -1,16 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const cache = require('../cache');
+const cache = require('../lib/cache');
 
 router.get('/', (req, res) => {
     try {
         const {q, orderBy, select} = req.query;
         // Validate cache availability
-        if (!Array.isArray(cache.ptcgSets)) {
+        if (!Array.isArray(cache.tcgpSets)) {
             return res.status(500).json({ error: 'Sets cache not available' });
         }
 
-        let results = cache.ptcgSets;
+        let results = cache.tcgpSets;
 
         if (q) {
             let regex;
@@ -38,7 +38,7 @@ router.get('/', (req, res) => {
 
         res.json(results);
     } catch (error) {
-        const logger = require('../logger');
+        const logger = require('../lib/logger');
         logger.error('Error fetching sets data:', error);
         res.status(500).json({error: 'Failed to fetch sets data'});
     }
