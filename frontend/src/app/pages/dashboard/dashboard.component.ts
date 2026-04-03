@@ -2,7 +2,7 @@ import {Component} from '@angular/core';
 import {CommonModule} from "@angular/common";
 import {CardModule} from "primeng/card";
 import {ButtonModule} from 'primeng/button';
-import {LinkComponent} from "@app/components/link/link.component";
+import {LinkComponent} from "../../components/link/link.component";
 
 @Component({
     standalone: true,

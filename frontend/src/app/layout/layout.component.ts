@@ -5,7 +5,7 @@ import {MenuItem} from "primeng/api";
 import {Avatar} from "primeng/avatar";
 import {Menubar} from "primeng/menubar";
 import {filter} from 'rxjs/operators';
-import {PingService} from "@app/services/ping.service";
+import {PingService} from "../services/ping.service";
 import {Tag} from "primeng/tag";
 
 @Component({

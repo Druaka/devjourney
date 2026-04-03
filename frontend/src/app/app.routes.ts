@@ -1,8 +1,8 @@
 import {Routes} from '@angular/router';
-import {DashboardComponent} from "@app/pages/dashboard/dashboard.component";
-import {JournalComponent} from "@app/pages/journal/journal.component";
-import {SetsComponent} from "@app/pages/sets/sets.component";
-import {CardsComponent} from "@app/pages/cards/cards.component";
+import {DashboardComponent} from "./pages/dashboard/dashboard.component";
+import {JournalComponent} from "./pages/journal/journal.component";
+import {SetsComponent} from "./pages/sets/sets.component";
+import {CardsComponent} from "./pages/cards/cards.component";
 
 export const routes: Routes = [
     {path: '', component: DashboardComponent},

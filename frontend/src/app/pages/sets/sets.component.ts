@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
-import {TcgdexService} from '@app/services/tcgdex.service';
+import {TcgdexService} from '../../services/tcgdex.service';
 import {CommonModule} from "@angular/common";
 import {Panel} from "primeng/panel";
 import {DataViewModule} from 'primeng/dataview';

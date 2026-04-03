@@ -9,7 +9,7 @@ import {InputText} from "primeng/inputtext";
 import {NgForOf, NgIf} from "@angular/common";
 import {Ripple} from "primeng/ripple";
 import {ActivatedRoute, Router} from "@angular/router";
-import {TcgdexService} from "@app/services/tcgdex.service";
+import {TcgdexService} from "../../services/tcgdex.service";
 import {Skeleton} from "primeng/skeleton";
 
 @Component({
