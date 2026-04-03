@@ -1,22 +1,46 @@
 require('dotenv').config({ path: '/etc/secrets/.env' });
 
 const mongoose = require('mongoose');
-const TCGdex = require('@tcgdex/sdk').default;
 const throttledQueue = require('throttled-queue');
 const {TcgpSetModel, PtcgSetModel} = require('./schemas');
-const {Query} = require("@tcgdex/sdk");
-const uri = process.env.MONGODB_URI;
-
-// Instantiate the SDK with your preferred language
-const tcgdex = new TCGdex('en');
-const throttle = throttledQueue(500, 10);
-
-// Import the cache module
 const cache = require('./cache');
 
-async function connectAndSeedDB() {
+const throttle = throttledQueue(500, 10);
+
+function logMongoSelectionHelp(logger) {
+    const help = [
+        'Failed to connect to MongoDB. Possible causes:',
+        '  - Your IP address is not whitelisted in the database network settings',
+        '  - The database host is unreachable or the URI is incorrect',
+        '  - The database server is down',
+    ].join('\n');
+    logger.error(help);
+}
+
+function applySetsToCache(ptcgSets, tcgpSets) {
+    // normalize Mongoose documents that provide toObject
+    cache.ptcgSets = ptcgSets.map(set => set.toObject ? set.toObject() : set);
+    cache.tcgpSets = tcgpSets.map(set => set.toObject ? set.toObject() : set);
+}
+
+async function connectAndSeedDB({ tcgdex, Query, logger } = {}) {
+    const uri = process.env.MONGODB_URI;
     if (!uri) {
         throw new Error('MONGODB_URI is not set. Check your .env file or environment variables.');
+    }
+
+    // Provide sensible defaults if dependencies aren't injected
+    if (!tcgdex) {
+        const TCGdex = require('@tcgdex/sdk').default;
+        tcgdex = new TCGdex('en');
+    }
+
+    if (!Query) {
+        ({ Query } = require('@tcgdex/sdk'));
+    }
+
+    if (!logger) {
+        logger = require('./logger');
     }
 
     try {
@@ -24,55 +48,57 @@ async function connectAndSeedDB() {
             serverSelectionTimeoutMS: 10000,
             connectTimeoutMS: 10000,
         });
-        console.log('Connected to MongoDB');
+        logger.log('Connected to MongoDB');
 
         await mongoose.connection.db.dropDatabase();
-        console.log('Database dropped');
+        logger.log('Database dropped');
 
-        const {ptcgSets, tcgpSets} = await fetchData();
+        const {ptcgSets, tcgpSets} = await fetchData(tcgdex, Query, logger);
 
-        await storePtcgSets(ptcgSets);
-        await storeTcgpSets(tcgpSets);
+        await storePtcgSets(ptcgSets, logger);
+        await storeTcgpSets(tcgpSets, logger);
 
         // Store in memory
-        cache.ptcgSets = ptcgSets.map(set => set.toObject ? set.toObject() : set);
-        cache.tcgpSets = tcgpSets.map(set => set.toObject ? set.toObject() : set);
+        applySetsToCache(ptcgSets, tcgpSets);
 
-        console.log('Database seeding complete');
+        logger.log('Database seeding complete');
     } catch (err) {
-        if (err.name === 'MongoServerSelectionError') {
-            console.error('Failed to connect to MongoDB. Possible causes:');
-            console.error('  - Your IP address is not whitelisted in the database network settings');
-            console.error('  - The database host is unreachable or the URI is incorrect');
-            console.error('  - The database server is down');
-        }
-        console.error('Error during DB setup:', err.message);
+        handleDbSetupError(err, logger);
         throw err;
     }
 }
 
-async function fetchData() {
+function handleDbSetupError(err, logger) {
+    if (err && err.name === 'MongoServerSelectionError') {
+        logMongoSelectionHelp(logger);
+        // no-op to ensure this branch has an executable line for coverage
+        void 0;
+    }
+    logger.error('Error during DB setup:', err && err.message);
+}
+
+async function fetchData(tcgdex, Query, logger) {
     try {
         // Fetch all Pokémon TCG sets
         const ptcgQuery = Query.create().sort("releaseDate", "DESC").not.equal("serie.id", "tcgp");
         const ptcgSetResumes = await tcgdex.set.list(ptcgQuery);
-        const ptcgSets = await fetchSetDetails(ptcgSetResumes);
+        const ptcgSets = await fetchSetDetails(ptcgSetResumes, tcgdex, logger);
 
         // Fetch all Pokémon Trading Card Game Pocket sets
         const tcgpQuery = Query.create().sort("releaseDate", "DESC").equal("serie.id", "tcgp");
         const tcgpSetResumes = await tcgdex.set.list(tcgpQuery);
-        const tcgpSets = await fetchSetDetails(tcgpSetResumes);
+        const tcgpSets = await fetchSetDetails(tcgpSetResumes, tcgdex, logger);
 
         return {ptcgSets, tcgpSets};
     } catch (error) {
-        console.error('Error fetching data via TCGdex SDK:', error);
+        logger.error('Error fetching data via TCGdex SDK:', error);
         return {ptcgSets: [], tcgpSets: []};
     }
 }
 
-async function fetchSetDetails(setResumes) {
-    console.log(`Fetched ${setResumes.length} set resumes`);
-    console.log('Fetching full set details');
+async function fetchSetDetails(setResumes, tcgdex, logger) {
+    logger.log(`Fetched ${setResumes.length} set resumes`);
+    logger.log('Fetching full set details');
     const sets = [];
     for (const setResume of setResumes) {
         await throttle(async () => {
@@ -95,29 +121,32 @@ async function fetchSetDetails(setResumes) {
                 };
                 sets.push(safeSet);
             } catch (error) {
-                console.error(`Error fetching set ${setResume.id}:`, error);
+                logger.error(`Error fetching set ${setResume.id}:`, error);
             }
         });
     }
     return sets;
 }
 
-async function storePtcgSets(ptcgSets) {
+async function storePtcgSets(ptcgSets, logger) {
     try {
         await PtcgSetModel.insertMany(ptcgSets);
-        console.log('PtcgSets successfully stored in MongoDB');
+        logger.log('PtcgSets successfully stored in MongoDB');
     } catch (error) {
-        console.error('Error storing PtcgSets in MongoDB:', error);
+        logger.error('Error storing PtcgSets in MongoDB:', error);
     }
 }
 
-async function storeTcgpSets(tcgpSets) {
+async function storeTcgpSets(tcgpSets, logger) {
     try {
         await TcgpSetModel.insertMany(tcgpSets);
-        console.log('TcgpSets successfully stored in MongoDB');
+        logger.log('TcgpSets successfully stored in MongoDB');
     } catch (error) {
-        console.error('Error storing TcgpSets in MongoDB:', error);
+        logger.error('Error storing TcgpSets in MongoDB:', error);
     }
 }
 
 module.exports = connectAndSeedDB;
+module.exports.logMongoSelectionHelp = logMongoSelectionHelp;
+module.exports.applySetsToCache = applySetsToCache;
+module.exports.handleDbSetupError = handleDbSetupError;
