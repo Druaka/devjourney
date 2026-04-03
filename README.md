@@ -30,6 +30,7 @@ This monorepo contains a live Angular frontend, a Node/Express backend, and a Mo
 
 **Notes**
 - **Backend lifecycle:** on startup the server connects to MongoDB, fetches and sanitizes the latest TCG sets via the TCGdex SDK, stores them in MongoDB and caches the results in memory for fast reads.
+- **Start command:** the backend `start` script now runs `node src/server.js` (the Docker image and `backend/package.json` are configured to use this).
 - **Render free-tier:** the backend may spin down after ~15 minutes of inactivity; the first request after spin-down triggers a cold start which can take up to ~1 minute.
 - **Database:** production and staging data are hosted on OVHcloud's MongoDB Discovery offering. Connection details are supplied via `MONGODB_URI`.
 - **Local development:** run `docker compose up --build` to bring up MongoDB, backend and frontend. Frontend: `http://localhost:4200/devjourney`. Backend: `http://localhost:8080`.

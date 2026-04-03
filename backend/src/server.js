@@ -9,36 +9,42 @@ const port = process.env.PORT || 8080;
 
 app.use(cors());
 app.use(express.json());
+const logger = require('./lib/logger');
 
 // Log the server's public IP on startup (useful for DB IP whitelisting)
 async function logPublicIp() {
     try {
         const res = await fetch('https://api.ipify.org?format=json');
         const data = await res.json();
-        console.log(`Server public IP: ${data.ip} (whitelist this in your database network settings)`);
+        logger.log(`Server public IP: ${data.ip} (whitelist this in your database network settings)`);
     } catch {
-        console.log('Could not determine public IP');
+        logger.log('Could not determine public IP');
     }
 }
+
+// Mount routes so the app is usable in tests without starting the server
+app.use('/api/ping', pingRoutes);
+app.use('/api/tcgdex/ptcg-sets', setsPtcgRoutes);
+app.use('/api/tcgdex/tcgp-sets', setsTcgpRoutes);
 
 // Main function to setup DB then start server
 async function startServer() {
     try {
         await logPublicIp();
-        await require('./db.js')();
-
-        // Use the routes
-        app.use('/api/ping', pingRoutes);
-        app.use('/api/tcgdex/ptcg-sets', setsPtcgRoutes);
-        app.use('/api/tcgdex/tcgp-sets', setsTcgpRoutes);
+        await require('./services/db')();
 
         app.listen(port, () => {
-            console.log(`Backend listening at http://localhost:${port}`);
+            logger.log(`Backend listening at http://localhost:${port}`);
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        logger.error('Failed to start server:', error);
         process.exit(1);
     }
 }
 
-startServer();
+module.exports = { app, startServer };
+
+// Preserve previous behavior when running the file directly
+if (require.main === module || process.env.FORCE_START === '1') {
+    startServer();
+}

@@ -1,14 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const cache = require('../cache');
+const cache = require('../lib/cache');
 
 router.get('/', (req, res) => {
     try {
         const {q, orderBy, select} = req.query;
+        // Validate cache availability
+        if (!Array.isArray(cache.ptcgSets)) {
+            return res.status(500).json({ error: 'Sets cache not available' });
+        }
+
         let results = cache.ptcgSets;
 
         if (q) {
-            const regex = new RegExp(q, 'i');
+            let regex;
+            try {
+                regex = new RegExp(q, 'i');
+            } catch (err) {
+                return res.status(400).json({ error: 'Invalid query regex' });
+            }
             results = results.filter(set => regex.test(set.name));
         }
 
@@ -28,7 +38,8 @@ router.get('/', (req, res) => {
 
         res.json(results);
     } catch (error) {
-        console.error('Error fetching sets data:', error);
+        const logger = require('../lib/logger');
+        logger.error('Error fetching sets data:', error);
         res.status(500).json({error: 'Failed to fetch sets data'});
     }
 });
