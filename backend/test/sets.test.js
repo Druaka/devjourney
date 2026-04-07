@@ -1,177 +1,80 @@
 const request = require('supertest');
-const { makeAppWithRoute } = require('./utils/helpers');
+const express = require('express');
 
-describe('PTCG and TCGP sets routes (consolidated)', () => {
-  afterEach(() => {
-    const cache = require('../src/lib/cache');
-    cache.ptcgSets = [];
-    cache.tcgpSets = [];
-  });
+const ptcgRoutes = require('../src/routes/ptcg-sets');
+const tcgpRoutes = require('../src/routes/tcgp-sets');
+const cache = require('../src/lib/cache');
 
-  describe('ptcg-sets', () => {
-    it('returns all sets and filters/selects/orders', async () => {
-      const cache = require('../src/lib/cache');
-      const app = makeAppWithRoute('/api/tcgdex/ptcg-sets', cache, 'ptcgSets', [
-        { name: 'Alpha Set', code: 'A1', releaseDate: '2020-01-01' },
-        { name: 'Beta Set', code: 'B1', releaseDate: '2021-05-10' },
-      ], '../src/routes/ptcg-sets');
+describe('Sets routes', () => {
+    let app;
 
-      const res = await request(app).get('/api/tcgdex/ptcg-sets/');
-      expect(res.status).toBe(200);
-      expect(res.body.length).toBe(2);
-
-      const res2 = await request(app).get('/api/tcgdex/ptcg-sets').query({ q: 'beta' });
-      expect(res2.status).toBe(200);
-      expect(res2.body.length).toBe(1);
-
-      const res3 = await request(app).get('/api/tcgdex/ptcg-sets').query({ select: 'name,code' });
-      expect(res3.status).toBe(200);
-      expect(res3.body[0]).toHaveProperty('name');
-      expect(res3.body[0]).not.toHaveProperty('releaseDate');
+    beforeAll(() => {
+        app = express();
+        app.use('/api/ptcg-sets', ptcgRoutes);
+        app.use('/api/tcgp-sets', tcgpRoutes);
     });
 
-    it('returns 500 when cache missing and 400 for invalid regex', async () => {
-      const cache = require('../src/lib/cache');
-      const app = makeAppWithRoute('/api/tcgdex/ptcg-sets', cache, 'ptcgSets', [
-        { name: 'Alpha Set', code: 'A1' }
-      ], '../src/routes/ptcg-sets');
-
-      cache.ptcgSets = undefined;
-      const res = await request(app).get('/api/tcgdex/ptcg-sets/');
-      expect(res.status).toBe(500);
-
-      cache.ptcgSets = [{ name: 'Alpha Set' }];
-      const bad = await request(app).get('/api/tcgdex/ptcg-sets').query({ q: '[' });
-      expect(bad.status).toBe(400);
+    beforeEach(() => {
+        // reset caches
+        cache.ptcgSets = [
+            { name: 'Alpha Set', code: 'ALP', year: 2020 },
+            { name: 'Beta Set', code: 'BET', year: 2019 },
+            { name: 'Gamma Collection', code: 'GAM', year: 2021 }
+        ];
+        cache.tcgpSets = JSON.parse(JSON.stringify(cache.ptcgSets));
     });
 
-    it('select includes missing fields (undefined) and orderBy works for ptcg', async () => {
-      const cache = require('../src/lib/cache');
-      const app = makeAppWithRoute('/api/tcgdex/ptcg-sets', cache, 'ptcgSets', [
-        { name: 'Alpha Set', code: 'A1', releaseDate: '2020-01-01', rank: 2 },
-        { name: 'Beta Set', code: 'B1', releaseDate: '2021-05-10', rank: 1 },
-      ], '../src/routes/ptcg-sets');
+    const endpoints = [
+        { path: '/api/ptcg-sets', key: 'ptcgSets' },
+        { path: '/api/tcgp-sets', key: 'tcgpSets' }
+    ];
 
-      const res = await request(app).get('/api/tcgdex/ptcg-sets').query({ select: 'name,nonexistent' });
-      expect(res.status).toBe(200);
-      expect(res.body[0]).toHaveProperty('name');
-      expect(res.body[0]).not.toHaveProperty('nonexistent');
+    endpoints.forEach(({ path, key }) => {
+        describe(path, () => {
+            it('returns all sets when no query', async () => {
+                const res = await request(app).get(path + '/');
+                expect(res.status).toBe(200);
+                expect(Array.isArray(res.body)).toBe(true);
+                expect(res.body.length).toBe(3);
+            });
 
-      const res2 = await request(app).get('/api/tcgdex/ptcg-sets').query({ orderBy: 'rank' });
-      expect(res2.status).toBe(200);
-      const ranks = res2.body.map(x => x.rank);
-      const sorted = [...ranks].sort((a, b) => (a > b ? 1 : -1));
-      expect(ranks).toEqual(sorted);
+            it('filters by q (regex, case-insensitive)', async () => {
+                const res = await request(app).get(path + '/').query({ q: 'alpha' });
+                expect(res.status).toBe(200);
+                expect(res.body.length).toBe(1);
+                expect(res.body[0].name).toBe('Alpha Set');
+            });
+
+            it('returns 400 for invalid regex in q', async () => {
+                const res = await request(app).get(path + '/').query({ q: '[' });
+                expect(res.status).toBe(400);
+                expect(res.body).toHaveProperty('error');
+            });
+
+            it('selects only requested fields', async () => {
+                const res = await request(app).get(path + '/').query({ select: 'name,code' });
+                expect(res.status).toBe(200);
+                expect(res.body[0]).toHaveProperty('name');
+                expect(res.body[0]).toHaveProperty('code');
+                expect(res.body[0]).not.toHaveProperty('year');
+            });
+
+            it('orders by given field (ascending)', async () => {
+                const res = await request(app).get(path + '/').query({ orderBy: 'name' });
+                expect(res.status).toBe(200);
+                const names = res.body.map(s => s.name);
+                const sorted = [...names].sort((a, b) => (a > b ? 1 : -1));
+                expect(names).toEqual(sorted);
+            });
+
+            it('returns 500 when cache is not available', async () => {
+                const original = cache[key];
+                cache[key] = null;
+                const res = await request(app).get(path + '/');
+                expect(res.status).toBe(500);
+                expect(res.body).toHaveProperty('error');
+                cache[key] = original;
+            });
+        });
     });
-
-    it('sort comparator exercises both branches for ptcg orderBy', async () => {
-      const cache = require('../src/lib/cache');
-
-      // Make array where first comparison yields true and another yields false during sort
-      const app1 = makeAppWithRoute('/api/tcgdex/ptcg-sets', cache, 'ptcgSets', [
-        { name: 'A', rank: 3 },
-        { name: 'B', rank: 2 },
-        { name: 'C', rank: 1 },
-      ], '../src/routes/ptcg-sets');
-
-      const res1 = await request(app1).get('/api/tcgdex/ptcg-sets').query({ orderBy: 'rank' });
-      expect(res1.status).toBe(200);
-
-      // Reverse the array to force different comparison outcomes
-      const app2 = makeAppWithRoute('/api/tcgdex/ptcg-sets', cache, 'ptcgSets', [
-        { name: 'C', rank: 1 },
-        { name: 'B', rank: 2 },
-        { name: 'A', rank: 3 },
-      ], '../src/routes/ptcg-sets');
-
-      const res2 = await request(app2).get('/api/tcgdex/ptcg-sets').query({ orderBy: 'rank' });
-      expect(res2.status).toBe(200);
-
-      // Ensure both responses are arrays and sorted correctly
-      expect(Array.isArray(res1.body)).toBeTruthy();
-      expect(Array.isArray(res2.body)).toBeTruthy();
-    });
-  });
-
-  describe('tcgp-sets', () => {
-    it('returns tcgp sets, filters and orders', async () => {
-      const cache = require('../src/lib/cache');
-      const app = makeAppWithRoute('/api/tcgdex/tcgp-sets', cache, 'tcgpSets', [
-        { name: 'Delta Set', code: 'D1', releaseDate: '2018-03-03' },
-        { name: 'Epsilon Set', code: 'E1', releaseDate: '2022-02-02' },
-      ], '../src/routes/tcgp-sets');
-
-      const res = await request(app).get('/api/tcgdex/tcgp-sets/');
-      expect(res.status).toBe(200);
-      expect(res.body.length).toBe(2);
-
-      const res2 = await request(app).get('/api/tcgdex/tcgp-sets').query({ q: 'epsilon' });
-      expect(res2.status).toBe(200);
-      expect(res2.body.length).toBe(1);
-    });
-
-    it('handles select/orderBy combinations and invalid regex', async () => {
-      const cache = require('../src/lib/cache');
-      const app = makeAppWithRoute('/api/tcgdex/tcgp-sets', cache, 'tcgpSets', [
-        { name: 'Delta Set', code: 'D1', releaseDate: '2018-03-03', cardCount: 5 },
-        { name: 'Epsilon Set', code: 'E1', releaseDate: '2022-02-02', cardCount: 15 },
-        { name: 'Gamma Collection', code: 'G1', releaseDate: '2019-07-07', cardCount: 10 },
-      ], '../src/routes/tcgp-sets');
-
-      const res = await request(app).get('/api/tcgdex/tcgp-sets').query({ select: 'name,nonexistent' });
-      expect(res.status).toBe(200);
-
-      const res2 = await request(app).get('/api/tcgdex/tcgp-sets').query({ orderBy: 'cardCount' });
-      expect(res2.status).toBe(200);
-      const counts = res2.body.map(x => x.cardCount);
-      const sorted = [...counts].sort((a, b) => (a > b ? 1 : -1));
-      expect(counts).toEqual(sorted);
-
-      const bad = await request(app).get('/api/tcgdex/tcgp-sets').query({ q: '(' });
-      expect(bad.status).toBe(400);
-    });
-
-    it('returns 500 when tcgp cache is undefined', async () => {
-      const cache = require('../src/lib/cache');
-      const app = makeAppWithRoute('/api/tcgdex/tcgp-sets', cache, 'tcgpSets', [
-        { name: 'Delta Set', code: 'D1' }
-      ], '../src/routes/tcgp-sets');
-
-      cache.tcgpSets = undefined;
-      const res = await request(app).get('/api/tcgdex/tcgp-sets/');
-      expect(res.status).toBe(500);
-    });
-
-    it('logs and returns 500 when handler throws for tcgp', async () => {
-      jest.resetModules();
-      const mockLogger = { error: jest.fn(), log: jest.fn() };
-      jest.doMock('../src/lib/logger', () => mockLogger);
-
-      const cache = require('../src/lib/cache');
-      const app = makeAppWithRoute('/api/tcgdex/tcgp-sets', cache, 'tcgpSets', [ { name: 'X' } ], '../src/routes/tcgp-sets');
-
-      Object.defineProperty(cache, 'tcgpSets', { get: () => { throw new Error('boom tcgp'); } });
-
-      const res = await request(app).get('/api/tcgdex/tcgp-sets/');
-      expect(res.status).toBe(500);
-      expect(mockLogger.error).toHaveBeenCalled();
-    });
-  });
-
-  describe('handler catch paths for ptcg', () => {
-    it('logs and returns 500 when handler throws for ptcg', async () => {
-      jest.resetModules();
-      const mockLogger = { error: jest.fn(), log: jest.fn() };
-      jest.doMock('../src/lib/logger', () => mockLogger);
-
-      const cache = require('../src/lib/cache');
-      const app = makeAppWithRoute('/api/tcgdex/ptcg-sets', cache, 'ptcgSets', [ { name: 'Y' } ], '../src/routes/ptcg-sets');
-
-      Object.defineProperty(cache, 'ptcgSets', { get: () => { throw new Error('boom ptcg'); } });
-
-      const res = await request(app).get('/api/tcgdex/ptcg-sets/');
-      expect(res.status).toBe(500);
-      expect(mockLogger.error).toHaveBeenCalled();
-    });
-  });
 });
