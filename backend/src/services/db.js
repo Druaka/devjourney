@@ -149,23 +149,6 @@ async function fetchSetDetails(setResumes, tcgdex, logger) {
     return sets;
 }
 
-async function storePtcgSets(ptcgSets, logger) {
-    try {
-        await PtcgSetModel.insertMany(ptcgSets);
-        logger.log('PtcgSets successfully stored in MongoDB');
-    } catch (error) {
-        logger.error('Error storing PtcgSets in MongoDB:', error);
-    }
-}
-
-async function storeTcgpSets(tcgpSets, logger) {
-    try {
-        await TcgpSetModel.insertMany(tcgpSets);
-        logger.log('TcgpSets successfully stored in MongoDB');
-    } catch (error) {
-        logger.error('Error storing TcgpSets in MongoDB:', error);
-    }
-}
 
 module.exports = connectAndSeedDB;
 module.exports.logMongoSelectionHelp = logMongoSelectionHelp;

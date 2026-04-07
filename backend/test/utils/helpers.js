@@ -1,10 +1,6 @@
 const express = require('express');
 const path = require('path');
 
-function setTestMongoUri() {
-  process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/devjourney_test';
-}
-
 function makeAppWithRoute(route, cacheModule, cacheKey, initialData = [], routeModulePath) {
   const app = express();
   cacheModule[cacheKey] = initialData;
@@ -16,24 +12,4 @@ function makeAppWithRoute(route, cacheModule, cacheKey, initialData = [], routeM
   return app;
 }
 
-function createMockTcgdex({ listRes = [], getRes = {} } = {}) {
-  return {
-    set: {
-      list: jest.fn().mockResolvedValue(listRes),
-      get: jest.fn().mockResolvedValue(getRes),
-    },
-  };
-}
-
-function createMockQuery() {
-  return {
-    create: jest.fn().mockImplementation(() => ({
-      sort: () => ({
-        not: { equal: () => ({}) },
-        equal: () => ({}),
-      }),
-    })),
-  };
-}
-
-module.exports = { setTestMongoUri, makeAppWithRoute, createMockTcgdex, createMockQuery };
+module.exports = { makeAppWithRoute };
