@@ -50,18 +50,39 @@ async function connectAndSeedDB({ tcgdex, Query, logger } = {}) {
         });
         logger.log('Connected to MongoDB');
 
-        await mongoose.connection.db.dropDatabase();
-        logger.log('Database dropped');
-
+        // Fetch remote data
         const {ptcgSets, tcgpSets} = await fetchData(tcgdex, Query, logger);
 
-        await storePtcgSets(ptcgSets, logger);
-        await storeTcgpSets(tcgpSets, logger);
+        // Idempotent upserts: build bulkWrite operations for better performance
+        // Use $setOnInsert so existing documents are left untouched; new docs will be inserted.
+        if (ptcgSets && ptcgSets.length) {
+            const ptcgOps = ptcgSets.map(set => ({
+                updateOne: {
+                    filter: { id: set.id },
+                    update: { $setOnInsert: set },
+                    upsert: true
+                }
+            }));
+            await PtcgSetModel.bulkWrite(ptcgOps, { ordered: false });
+            logger.log(`Bulk upserted ${ptcgSets.length} PTCG sets`);
+        }
 
-        // Store in memory
+        if (tcgpSets && tcgpSets.length) {
+            const tcgpOps = tcgpSets.map(set => ({
+                updateOne: {
+                    filter: { id: set.id },
+                    update: { $setOnInsert: set },
+                    upsert: true
+                }
+            }));
+            await TcgpSetModel.bulkWrite(tcgpOps, { ordered: false });
+            logger.log(`Bulk upserted ${tcgpSets.length} TCGP sets`);
+        }
+
+        // Store in memory (use the fetched sets so cache reflects what's available locally)
         applySetsToCache(ptcgSets, tcgpSets);
 
-        logger.log('Database seeding complete');
+        logger.log('Idempotent seeding complete');
     } catch (err) {
         handleDbSetupError(err, logger);
         throw err;
